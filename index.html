@@ -6,16 +6,17 @@
     <title>Arche Global | Onboarding Portal</title>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;700&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'DM Sans', sans-serif; background-color: #f4f7f6; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .container { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 100%; max-width: 400px; border-top: 5px solid #e8470a; }
-        h2 { color: #111214; margin-bottom: 25px; text-align: center; font-weight: 700; }
+        :root { --primary-color: #e8470a; --bg-color: #f4f7f6; --text-dark: #111214; --text-light: #475467; }
+        body { font-family: 'DM Sans', sans-serif; background-color: var(--bg-color); display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .container { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 100%; max-width: 400px; border-top: 5px solid var(--primary-color); }
+        h2 { color: var(--text-dark); margin-bottom: 25px; text-align: center; font-weight: 700; }
         .form-group { margin-bottom: 20px; }
-        label { display: block; font-size: 14px; margin-bottom: 8px; color: #475467; font-weight: 500; }
+        label { display: block; font-size: 14px; margin-bottom: 8px; color: var(--text-light); font-weight: 500; }
         input { width: 100%; padding: 12px; border: 1px solid #d0d5dd; border-radius: 8px; box-sizing: border-box; font-size: 14px; transition: 0.3s; }
-        input:focus { border-color: #e8470a; outline: none; box-shadow: 0 0 0 4px rgba(232, 71, 10, 0.1); }
-        button { width: 100%; background-color: #e8470a; color: white; padding: 14px; border: none; border-radius: 8px; font-size: 16px; font-weight: 700; cursor: pointer; transition: background 0.3s; margin-top: 10px; }
+        input:focus { border-color: var(--primary-color); outline: none; box-shadow: 0 0 0 4px rgba(232, 71, 10, 0.1); }
+        button { width: 100%; background-color: var(--primary-color); color: white; padding: 14px; border: none; border-radius: 8px; font-size: 16px; font-weight: 700; cursor: pointer; transition: background 0.3s; margin-top: 10px; }
         button:hover { background-color: #cf3d08; }
-        #status { margin-top: 20px; font-size: 14px; text-align: center; min-height: 20px; }
+        #status { margin-top: 20px; font-size: 14px; text-align: center; min-height: 20px; transition: color 0.3s; }
     </style>
 </head>
 <body>
@@ -25,53 +26,59 @@
     
     <div class="form-group">
         <label>Full Name</label>
-        <input type="text" id="candidate_name" placeholder="John Doe">
+        <input type="text" id="candidate_name" placeholder="Prem Kumar" required>
     </div>
 
     <div class="form-group">
         <label>Employee ID</label>
-        <input type="text" id="emp_id" placeholder="AG-2026-XXXX">
+        <input type="text" id="emp_id" placeholder="AG1504" required>
     </div>
 
     <div class="form-group">
         <label>Department</label>
-        <input type="text" id="dept_name" placeholder="Infrastructure">
+        <input type="text" id="dept_name" placeholder="Automation">
     </div>
 
-    <button onclick="triggerOnboarding()">Initiate Workflow</button>
+    <button id="submitBtn" onclick="triggerOnboarding()">Initiate Workflow</button>
     <div id="status"></div>
 </div>
 
 <script>
     async function triggerOnboarding() {
         const statusDiv = document.getElementById('status');
+        const submitBtn = document.getElementById('submitBtn');
         
-        // Finalized Configuration from your URL
+        // --- Semaphore Configuration ---
         const projectId = 2; 
         const templateId = 1; 
         const apiToken = 'nzeb2gyge37imfhtnziayrgot77wfg5cmcf2qdselug=';
+        const semaphoreUrl = `http://127.0.0.1:3001/api/project/${projectId}/templates/${templateId}/tasks`;
 
         const data = {
-            name: document.getElementById('candidate_name').value,
-            id: document.getElementById('emp_id').value,
-            dept: document.getElementById('dept_name').value
+            name: document.getElementById('candidate_name').value.trim(),
+            id: document.getElementById('emp_id').value.trim(),
+            dept: document.getElementById('dept_name').value.trim()
         };
 
+        // Basic Validation
         if (!data.name || !data.id) {
-            statusDiv.innerText = "Please fill in mandatory fields.";
+            statusDiv.innerText = "✖ Please provide both Name and Employee ID.";
             statusDiv.style.color = "red";
             return;
         }
 
-        statusDiv.innerText = "Connecting to Semaphore...";
+        // UI State: Processing
+        statusDiv.innerText = "⏳ Connecting to Arche Automation Engine...";
         statusDiv.style.color = "#475467";
+        submitBtn.disabled = true;
 
         try {
-            const response = await fetch(`http://127.0.0.1:3001/api/v1/project/2/templates/1/tasks`, {
+            const response = await fetch(semaphoreUrl, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${apiToken}`
+                    'Authorization': `Bearer ${apiToken}`,
+                    'X-Requested-With': 'XMLHttpRequest'
                 },
                 body: JSON.stringify({
                     "template_id": templateId,
@@ -84,18 +91,22 @@
             });
 
             if (response.ok) {
-                statusDiv.innerText = "✔ Success! Automation triggered.";
+                statusDiv.innerText = "✔ Success! Task #1 triggered in Project 2.";
                 statusDiv.style.color = "green";
+                // Optional: Clear form
+                document.querySelectorAll('input').forEach(i => i.value = '');
             } else {
-                const errorData = await response.text();
-                statusDiv.innerText = "✖ Failed: " + response.status;
+                const errorText = await response.text();
+                statusDiv.innerText = `✖ Server Error (${response.status}). Check Semaphore Logs.`;
                 statusDiv.style.color = "red";
-                console.error("Semaphore Error:", errorData);
+                console.error("Semaphore API Error:", errorText);
             }
         } catch (error) {
-            statusDiv.innerText = "✖ Network Error. Is Semaphore running?";
+            statusDiv.innerText = "✖ Network Error. Verify Docker is running and CORS is enabled.";
             statusDiv.style.color = "red";
             console.error("Fetch Error:", error);
+        } finally {
+            submitBtn.disabled = false;
         }
     }
 </script>
