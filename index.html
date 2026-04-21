@@ -16,7 +16,7 @@
         input:focus { border-color: var(--primary-color); outline: none; box-shadow: 0 0 0 4px rgba(232, 71, 10, 0.1); }
         button { width: 100%; background-color: var(--primary-color); color: white; padding: 14px; border: none; border-radius: 8px; font-size: 16px; font-weight: 700; cursor: pointer; transition: background 0.3s; margin-top: 10px; }
         button:hover { background-color: #cf3d08; }
-        #status { margin-top: 20px; font-size: 14px; text-align: center; min-height: 20px; transition: color 0.3s; }
+        #status { margin-top: 20px; font-size: 14px; text-align: center; min-height: 20px; }
     </style>
 </head>
 <body>
@@ -48,11 +48,11 @@
         const statusDiv = document.getElementById('status');
         const submitBtn = document.getElementById('submitBtn');
         
-        // --- Semaphore Configuration ---
+        // --- PRODUCTION CONFIGURATION ---
         const projectId = 1; 
         const templateId = 22; 
         const apiToken = 'e4nd-rj-ldwzndvh8veryxlmjzj87dba-tjoxpky8ya=';
-        const semaphoreUrl = `https://automation.arche.global/project/${projectId}/views/1/templates/${templateId}/tasks`;
+        const semaphoreUrl = `https://automation.arche.global/api/project/${projectId}/templates/${templateId}/tasks`;
 
         const data = {
             name: document.getElementById('candidate_name').value.trim(),
@@ -60,15 +60,13 @@
             dept: document.getElementById('dept_name').value.trim()
         };
 
-        // Basic Validation
         if (!data.name || !data.id) {
-            statusDiv.innerText = "✖ Please provide both Name and Employee ID.";
+            statusDiv.innerText = "✖ Mandatory fields missing.";
             statusDiv.style.color = "red";
             return;
         }
 
-        // UI State: Processing
-        statusDiv.innerText = "⏳ Connecting to Arche Automation Engine...";
+        statusDiv.innerText = "⏳ Triggering Production Workflow...";
         statusDiv.style.color = "#475467";
         submitBtn.disabled = true;
 
@@ -77,8 +75,7 @@
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${apiToken}`,
-                    'X-Requested-With': 'XMLHttpRequest'
+                    'Authorization': `Bearer ${apiToken}`
                 },
                 body: JSON.stringify({
                     "template_id": templateId,
@@ -91,18 +88,17 @@
             });
 
             if (response.ok) {
-                statusDiv.innerText = "✔ Success! Task #1 triggered in Project 2.";
+                statusDiv.innerText = "✔ Success! Process started on automation.arche.global";
                 statusDiv.style.color = "green";
-                // Optional: Clear form
                 document.querySelectorAll('input').forEach(i => i.value = '');
             } else {
-                const errorText = await response.text();
-                statusDiv.innerText = `✖ Server Error (${response.status}). Check Semaphore Logs.`;
+                const errorData = await response.text();
+                statusDiv.innerText = `✖ Failed: ${response.status}`;
                 statusDiv.style.color = "red";
-                console.error("Semaphore API Error:", errorText);
+                console.error("Semaphore Error:", errorData);
             }
         } catch (error) {
-            statusDiv.innerText = "✖ Network Error. Verify Docker is running and CORS is enabled.";
+            statusDiv.innerText = "✖ Network Error. Verify CORS settings on the production server.";
             statusDiv.style.color = "red";
             console.error("Fetch Error:", error);
         } finally {
