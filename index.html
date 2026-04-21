@@ -16,7 +16,8 @@
         input:focus { border-color: var(--primary-color); outline: none; box-shadow: 0 0 0 4px rgba(232, 71, 10, 0.1); }
         button { width: 100%; background-color: var(--primary-color); color: white; padding: 14px; border: none; border-radius: 8px; font-size: 16px; font-weight: 700; cursor: pointer; transition: background 0.3s; margin-top: 10px; }
         button:hover { background-color: #cf3d08; }
-        #status { margin-top: 20px; font-size: 14px; text-align: center; min-height: 20px; }
+        button:disabled { background-color: #ccc; cursor: not-allowed; }
+        #status { margin-top: 20px; font-size: 14px; text-align: center; min-height: 20px; font-weight: 500; }
     </style>
 </head>
 <body>
@@ -36,7 +37,7 @@
 
     <div class="form-group">
         <label>Department</label>
-        <input type="text" id="dept_name" placeholder="Automation">
+        <input type="text" id="dept_name" placeholder="Automation Engine">
     </div>
 
     <button id="submitBtn" onclick="triggerOnboarding()">Initiate Workflow</button>
@@ -48,11 +49,13 @@
         const statusDiv = document.getElementById('status');
         const submitBtn = document.getElementById('submitBtn');
         
-        // --- PRODUCTION CONFIGURATION ---
+        // --- VERIFIED PRODUCTION PARAMETERS ---
         const projectId = 1; 
         const templateId = 22; 
         const apiToken = 'e4nd-rj-ldwzndvh8veryxlmjzj87dba-tjoxpky8ya=';
-        const semaphoreUrl = `https://automation.arche.global/api/v1/project/${projectId}/templates/${templateId}/tasks`;
+        
+        // Use the EXACT endpoint that worked in PowerShell
+        const semaphoreUrl = `https://automation.arche.global/api/project/${projectId}/tasks`;
 
         const data = {
             name: document.getElementById('candidate_name').value.trim(),
@@ -61,12 +64,12 @@
         };
 
         if (!data.name || !data.id) {
-            statusDiv.innerText = "✖ Mandatory fields missing.";
+            statusDiv.innerText = "✖ Name and ID are mandatory.";
             statusDiv.style.color = "red";
             return;
         }
 
-        statusDiv.innerText = "⏳ Triggering Production Workflow...";
+        statusDiv.innerText = "⏳ Deploying to Arche Global Cloud...";
         statusDiv.style.color = "#475467";
         submitBtn.disabled = true;
 
@@ -88,17 +91,19 @@
             });
 
             if (response.ok) {
-                statusDiv.innerText = "✔ Success! Process started on automation.arche.global";
+                const result = await response.json();
+                statusDiv.innerText = `✔ Success! Created Task #${result.id}`;
                 statusDiv.style.color = "green";
+                // Clear the form
                 document.querySelectorAll('input').forEach(i => i.value = '');
             } else {
-                const errorData = await response.text();
-                statusDiv.innerText = `✖ Failed: ${response.status}`;
+                const errorText = await response.text();
+                statusDiv.innerText = `✖ API Rejection (${response.status})`;
                 statusDiv.style.color = "red";
-                console.error("Semaphore Error:", errorData);
+                console.error("Semaphore Error:", errorText);
             }
         } catch (error) {
-            statusDiv.innerText = "✖ Network Error. Verify CORS settings on the production server.";
+            statusDiv.innerText = "✖ CORS Error. Please enable your CORS Extension!";
             statusDiv.style.color = "red";
             console.error("Fetch Error:", error);
         } finally {
