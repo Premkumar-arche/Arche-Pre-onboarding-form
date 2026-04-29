@@ -10,7 +10,7 @@
         h1 { color: var(--accent); font-size: 22px; margin-bottom: 24px; text-align: center; }
         .field { margin-bottom: 18px; }
         label { display: block; font-size: 11px; color: #6b7280; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 1px; }
-        input { width: 100%; background: #1e2026; border: 1px solid #2a2d35; color: white; padding: 12px; border-radius: 10px; outline: none; transition: border-color 0.2s; }
+        input { width: 100%; background: #1e2026; border: 1px solid #2a2d35; color: white; padding: 12px; border-radius: 10px; outline: none; transition: border-color 0.2s; box-sizing: border-box; }
         input:focus { border-color: var(--accent); }
         button { width: 100%; background: var(--accent); border: none; padding: 14px; border-radius: 10px; color: white; font-weight: 700; cursor: pointer; margin-top: 10px; transition: opacity 0.2s; }
         button:disabled { opacity: 0.5; cursor: not-allowed; }
@@ -39,20 +39,32 @@
     <script>
         async function triggerAutomation() {
             const status = document.getElementById('status');
-            const btn = document.getElementById('btn');
-            
-            // --- DIRECT API CONFIG ---
-            const API_URL = "https://automation.arche.global/api/project/2/tasks";
-            const TOKEN = "0i1vdn5jwjxarzhtmss7l6q_dsz69qyn2uzisfvvxrs=";
-            const TEMPLATE_ID = 27; // Matches your UI ID
+            const btn    = document.getElementById('btn');
 
+            // ── SEMAPHORE CONFIG ──────────────────────────────────────────────
+            const API_URL     = "https://automation.arche.global/api/project/2/tasks";
+            const TOKEN       = "0i1vdn5jwjxarzhtmss7l6q_dsz69qyn2uzisfvvxrs=";
+            const TEMPLATE_ID = 27;
+            // ─────────────────────────────────────────────────────────────────
+
+            const name   = document.getElementById('name').value.trim();
+            const empid  = document.getElementById('empid').value.trim();
+            const dept   = document.getElementById('dept').value.trim();
+
+            if (!name || !empid) {
+                status.style.color = "#ef4444";
+                status.innerText = "✖ Candidate Name and Employee ID are required.";
+                return;
+            }
+
+            // Semaphore expects `environment` as a JSON *string*, not an object
             const payload = {
                 template_id: TEMPLATE_ID,
-                environment_variables: {
-                    CANDIDATE_NAME: document.getElementById('name').value.trim(),
-                    EMP_ID: document.getElementById('empid').value.trim(),
-                    DEPT_NAME: document.getElementById('dept').value.trim()
-                }
+                environment: JSON.stringify({
+                    CANDIDATE_NAME: name,
+                    EMP_ID:         empid,
+                    DEPT_NAME:      dept || "Standard IT",
+                }),
             };
 
             btn.disabled = true;
@@ -61,25 +73,27 @@
 
             try {
                 const response = await fetch(API_URL, {
-                    method: 'POST',
+                    method:  'POST',
                     headers: {
                         'Authorization': `Bearer ${TOKEN}`,
-                        'Content-Type': 'application/json'
+                        'Content-Type':  'application/json',
                     },
-                    body: JSON.stringify(payload)
+                    body: JSON.stringify(payload),
                 });
 
-                if (response.ok) {
-                    const result = await response.json();
+                const result = await response.json().catch(() => ({}));
+
+                if (response.ok && result.id) {
                     status.style.color = "#10b981";
-                    status.innerText = `✔ Task #${result.id} Started Successfully`;
+                    status.innerText = `✔ Task #${result.id} queued successfully`;
                 } else {
+                    const msg = result.error || result.message || `HTTP ${response.status}`;
                     status.style.color = "#ef4444";
-                    status.innerText = `✖ Error ${response.status}: Check API Permissions`;
+                    status.innerText = `✖ ${msg}`;
                 }
             } catch (err) {
                 status.style.color = "#ef4444";
-                status.innerText = "✖ Network Error: Ensure CORS is enabled on server";
+                status.innerText = "✖ Network error — check CORS settings on Semaphore";
             } finally {
                 btn.disabled = false;
             }
