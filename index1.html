@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Arche Global | Onboarding Portal</title>
+    <style>
+        :root { --accent: #e8470a; --bg: #0e0f11; --surface: #16181c; }
+        body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: #f0f1f3; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+        .card { background: var(--surface); border: 1px solid #2a2d35; border-radius: 16px; padding: 40px; width: 100%; max-width: 400px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        h1 { color: var(--accent); font-size: 22px; margin-bottom: 24px; text-align: center; }
+        .field { margin-bottom: 18px; }
+        label { display: block; font-size: 11px; color: #6b7280; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 1px; }
+        input { width: 100%; background: #1e2026; border: 1px solid #2a2d35; color: white; padding: 12px; border-radius: 10px; outline: none; transition: border-color 0.2s; }
+        input:focus { border-color: var(--accent); }
+        button { width: 100%; background: var(--accent); border: none; padding: 14px; border-radius: 10px; color: white; font-weight: 700; cursor: pointer; margin-top: 10px; transition: opacity 0.2s; }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
+        #status { margin-top: 20px; text-align: center; font-size: 13px; font-weight: 500; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>Onboarding Engine</h1>
+        <div class="field">
+            <label>Candidate Name</label>
+            <input type="text" id="name" placeholder="Full Name">
+        </div>
+        <div class="field">
+            <label>Employee ID</label>
+            <input type="text" id="empid" placeholder="e.g., AG1504">
+        </div>
+        <div class="field">
+            <label>Department</label>
+            <input type="text" id="dept" placeholder="e.g., IT Management">
+        </div>
+        <button id="btn" onclick="triggerAutomation()">Initiate Workflow</button>
+        <div id="status"></div>
+    </div>
+
+    <script>
+        async function triggerAutomation() {
+            const status = document.getElementById('status');
+            const btn = document.getElementById('btn');
+            
+            // --- DIRECT API CONFIG ---
+            const API_URL = "https://automation.arche.global/api/project/2/tasks";
+            const TOKEN = "0i1vdn5jwjxarzhtmss7l6q_dsz69qyn2uzisfvvxrs=";
+            const TEMPLATE_ID = 27; // Matches your UI ID
+
+            const payload = {
+                template_id: TEMPLATE_ID,
+                environment_variables: {
+                    CANDIDATE_NAME: document.getElementById('name').value.trim(),
+                    EMP_ID: document.getElementById('empid').value.trim(),
+                    DEPT_NAME: document.getElementById('dept').value.trim()
+                }
+            };
+
+            btn.disabled = true;
+            status.style.color = "#6b7280";
+            status.innerText = "⏳ Synchronizing with Semaphore...";
+
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${TOKEN}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    status.style.color = "#10b981";
+                    status.innerText = `✔ Task #${result.id} Started Successfully`;
+                } else {
+                    status.style.color = "#ef4444";
+                    status.innerText = `✖ Error ${response.status}: Check API Permissions`;
+                }
+            } catch (err) {
+                status.style.color = "#ef4444";
+                status.innerText = "✖ Network Error: Ensure CORS is enabled on server";
+            } finally {
+                btn.disabled = false;
+            }
+        }
+    </script>
+</body>
+</html>
